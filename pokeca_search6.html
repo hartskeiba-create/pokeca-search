@@ -65,6 +65,36 @@
       margin-top: 4px;
       position: relative;
     }
+    .version-badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,214,10,0.5);
+      color: rgba(255,214,10,0.8);
+      font-size: 0.75rem;
+      position: relative;
+    }
+    .version-badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,214,10,0.5);
+      color: rgba(255,214,10,0.8);
+      font-size: 0.75rem;
+      position: relative;
+    }
+    .version-badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,214,10,0.5);
+      color: rgba(255,214,10,0.8);
+      font-size: 0.75rem;
+      position: relative;
+    }
 
     /* ローディング */
     #loading {
@@ -389,6 +419,7 @@
 <header>
   <h1>🔴 ポケカ検索くん</h1>
   <p>ポケモンカード検索サイト</p>
+  <div class="version-badge">ver1.01</div>
 </header>
 
 <div id="loading">
@@ -497,12 +528,19 @@
     }
   }
 
-  // パック選択リスト構築
+  // パック選択リスト構築（拡張パック・強化拡張パック・ハイクラスパックのみ）
+  const PACK_TYPES = ['拡張パック', '強化拡張パック', 'ハイクラスパック'];
+  function isPack(productName) {
+    return PACK_TYPES.some(type => productName.includes(type));
+  }
+
   function buildPackSelect() {
     const packs = new Set();
     for (const cards of Object.values(ALL_DATA)) {
       for (const card of cards) {
-        for (const p of card.product_names) packs.add(p);
+        for (const p of card.product_names) {
+          if (isPack(p)) packs.add(p);
+        }
       }
     }
     const sorted = [...packs].sort();
