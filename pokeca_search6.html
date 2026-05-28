@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポケカ検索くん</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
+
+    :root {
+      --red: #e63946;
+      --yellow: #ffd60a;
+      --blue: #023e8a;
+      --light-blue: #48cae4;
+      --white: #f8f9fa;
+      --gray: #6c757d;
+      --bg: #0d1b2a;
+      --card-bg: #1b2a3b;
+      --border: #2d4a6b;
+      --text: #e0f0ff;
+      --text-dim: #7fa8c9;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ヘッダー */
+    header {
+      background: linear-gradient(135deg, #e63946 0%, #c1121f 50%, #023e8a 100%);
+      padding: 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(255,214,10,0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 50%, rgba(72,202,228,0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    header h1 {
+      font-family: 'Zen Maru Gothic', sans-serif;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--yellow);
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.5), 0 0 30px rgba(255,214,10,0.4);
+      letter-spacing: 0.05em;
+      position: relative;
+    }
+    header p {
+      color: rgba(255,255,255,0.8);
+      font-size: 0.85rem;
+      margin-top: 4px;
+      position: relative;
+    }
+
+    /* ローディング */
+    #loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      gap: 16px;
+    }
+    .pokeball-spin {
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { color: var(--text-dim); font-size: 1rem; }
+
+    /* メインレイアウト */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* 検索エリア */
+    .search-area {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-input-wrap {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+    .search-input-wrap input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input-wrap input:focus { border-color: var(--light-blue); }
+    .search-input-wrap::before {
+      content: '🔍';
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+      pointer-events: none;
+    }
+
+    /* 候補リスト */
+    #suggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    #suggestions.show { display: block; }
+    #suggestions div {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.15s;
+    }
+    #suggestions div:hover, #suggestions div.active { background: rgba(72,202,228,0.15); color: var(--light-blue); }
+    #suggestions::-webkit-scrollbar { width: 4px; }
+    #suggestions::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* 絞り込みボタン */
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .filter-label { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .filter-btn:hover { border-color: var(--light-blue); color: var(--light-blue); }
+    .filter-btn.active { background: var(--red); border-color: var(--red); color: white; font-weight: 700; }
+
+    /* パック絞り込み */
+    .pack-filter-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .pack-select {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+    .pack-select:focus { border-color: var(--light-blue); }
+
+    /* 検索ボタン */
+    .btn-search {
+      padding: 10px 24px;
+      border-radius: 10px;
+      border: none;
+      background: var(--red);
+      color: white;
+      font-size: 0.95rem;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-search:hover { background: #c1121f; transform: translateY(-1px); }
+    .btn-clear {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+    /* 結果件数 */
+    .result-info {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+    .result-info strong { color: var(--yellow); }
+
+    /* カードグリッド */
+    #results {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 14px;
+    }
+
+    .card-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+    .card-item:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      border-color: var(--light-blue);
+    }
+    .card-item img {
+      width: 100%;
+      aspect-ratio: 2/3;
+      object-fit: cover;
+      display: block;
+      background: #0a1628;
+    }
+    .card-info {
+      padding: 8px 10px;
+    }
+    .card-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-pack {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.3;
+    }
+
+    /* もっと見るボタン */
+    #load-more-wrap {
+      text-align: center;
+      margin-top: 24px;
+    }
+    #load-more {
+      padding: 12px 40px;
+      border-radius: 12px;
+      border: 2px solid var(--yellow);
+      background: transparent;
+      color: var(--yellow);
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #load-more:hover { background: var(--yellow); color: var(--bg); }
+
+    /* モーダル */
+    #modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #modal.show { display: flex; }
+    .modal-inner {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      max-width: 360px;
+      width: 100%;
+      position: relative;
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-inner img {
+      width: 100%;
+      border-radius: 10px;
+      display: block;
+    }
+    .modal-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-top: 12px;
+      color: var(--yellow);
+    }
+    .modal-packs {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .modal-close:hover { background: var(--red); }
+
+    /* 空状態 */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
+      grid-column: 1 / -1;
+    }
+    .empty-state .emoji { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 1rem; }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.5rem; }
+      #results { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔴 ポケカ検索くん</h1>
+  <p>ポケモンカード検索サイト</p>
+</header>
+
+<div id="loading">
+  <svg class="pokeball-spin" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="48" fill="none" stroke="#334" stroke-width="4"/>
+    <path d="M2 50 A48 48 0 0 1 98 50" fill="#e63946"/>
+    <path d="M2 50 A48 48 0 0 0 98 50" fill="#f8f9fa"/>
+    <line x1="2" y1="50" x2="98" y2="50" stroke="#222" stroke-width="5"/>
+    <circle cx="50" cy="50" r="12" fill="#222"/>
+    <circle cx="50" cy="50" r="7" fill="white"/>
+  </svg>
+  <p>カードデータを読み込み中...</p>
+</div>
+
+<div class="container" id="main" style="display:none">
+  <div class="search-area">
+    <!-- ポケモン名検索 -->
+    <div class="search-row">
+      <div class="search-input-wrap" style="position:relative">
+        <input type="text" id="name-input" placeholder="ポケモン名を入力（例：ピカチュウ）" autocomplete="off">
+        <div id="suggestions"></div>
+      </div>
+      <button class="btn-search" onclick="doSearch()">検索</button>
+      <button class="btn-clear" onclick="clearAll()">クリア</button>
+    </div>
+
+    <!-- カテゴリ絞り込み -->
+    <div class="filter-group">
+      <span class="filter-label">入手方法：</span>
+      <button class="filter-btn" data-cat="拡張パック" onclick="toggleCat(this)">拡張パック</button>
+      <button class="filter-btn" data-cat="強化拡張パック" onclick="toggleCat(this)">強化拡張パック</button>
+      <button class="filter-btn" data-cat="ハイクラスパック" onclick="toggleCat(this)">ハイクラスパック</button>
+      <button class="filter-btn" data-cat="デッキ" onclick="toggleCat(this)">デッキ</button>
+      <button class="filter-btn" data-cat="プロモ" onclick="toggleCat(this)">プロモ</button>
+      <button class="filter-btn" data-cat="スターター" onclick="toggleCat(this)">スターター</button>
+      <button class="filter-btn" data-cat="スペシャル" onclick="toggleCat(this)">スペシャル</button>
+    </div>
+
+    <!-- パック名絞り込み -->
+    <div class="pack-filter-row">
+      <select class="pack-select" id="pack-select" onchange="doSearch()">
+        <option value="">── パック名で絞り込む ──</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="result-info" id="result-info"></div>
+  <div id="results"></div>
+  <div id="load-more-wrap" style="display:none">
+    <button id="load-more" onclick="showMore()">もっと見る</button>
+  </div>
+</div>
+
+<!-- モーダル -->
+<div id="modal" onclick="closeModal(event)">
+  <div class="modal-inner">
+    <button class="modal-close" onclick="document.getElementById('modal').classList.remove('show')">✕</button>
+    <img id="modal-img" src="" alt="">
+    <div class="modal-name" id="modal-name"></div>
+    <div class="modal-packs" id="modal-packs"></div>
+  </div>
+</div>
+
+<script>
+  // =====================
+  // データ読み込み
+  // =====================
+  let ALL_DATA = {};
+  let ALL_NAMES = [];
+  let filteredCards = [];
+  let displayCount = 100;
+  const PAGE_SIZE = 100;
+
+  // カテゴリ判定
+  const CAT_KEYWORDS = {
+    '拡張パック':     ['拡張パック'],
+    '強化拡張パック': ['強化拡張パック'],
+    'ハイクラスパック':['ハイクラスパック'],
+    'デッキ':        ['デッキ', 'スタートデッキ', 'スターターデッキ', '対戦セット', '構築'],
+    'プロモ':        ['プロモ', 'キャンペーン', '付録', '参加賞', 'プレゼント', 'コロコロ', '購入', 'おまけ', '特典', '限定'],
+    'スターター':    ['スターターセット', 'スタートセット', 'はじめてセット'],
+    'スペシャル':    ['スペシャル', 'コレクション', 'ギフト', 'ボックス', 'プレミアム'],
+  };
+
+  function getCategory(productName) {
+    for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
+      for (const kw of keywords) {
+        if (productName.includes(kw)) return cat;
+      }
+    }
+    return 'その他';
+  }
+
+  async function loadData() {
+    try {
+      const res = await fetch('all_pokemon_cards.json');
+      if (!res.ok) throw new Error('fetch failed');
+      ALL_DATA = await res.json();
+      ALL_NAMES = Object.keys(ALL_DATA).sort();
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('main').style.display = 'block';
+      buildPackSelect();
+      doSearch();
+    } catch(e) {
+      document.getElementById('loading').innerHTML = '<p style="color:#e63946">データの読み込みに失敗しました。<br>同じフォルダに all_pokemon_cards.json があるか確認してください。</p>';
+    }
+  }
+
+  // パック選択リスト構築
+  function buildPackSelect() {
+    const packs = new Set();
+    for (const cards of Object.values(ALL_DATA)) {
+      for (const card of cards) {
+        for (const p of card.product_names) packs.add(p);
+      }
+    }
+    const sorted = [...packs].sort();
+    const sel = document.getElementById('pack-select');
+    for (const p of sorted) {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    }
+  }
+
+  // =====================
+  // サジェスト
+  // =====================
+  let suggActive = -1;
+  const nameInput = document.getElementById('name-input');
+  const suggestEl = document.getElementById('suggestions');
+
+  nameInput.addEventListener('input', () => {
+    const q = nameInput.value.trim();
+    suggestEl.innerHTML = '';
+    suggActive = -1;
+    if (!q) { suggestEl.classList.remove('show'); return; }
+    const hits = ALL_NAMES.filter(n => n.includes(q)).slice(0, 10);
+    if (!hits.length) { suggestEl.classList.remove('show'); return; }
+    hits.forEach((n, i) => {
+      const d = document.createElement('div');
+      d.textContent = n;
+      d.addEventListener('click', () => { nameInput.value = n; suggestEl.classList.remove('show'); doSearch(); });
+      suggestEl.appendChild(d);
+    });
+    suggestEl.classList.add('show');
+  });
+
+  nameInput.addEventListener('keydown', e => {
+    const items = suggestEl.querySelectorAll('div');
+    if (e.key === 'ArrowDown') { suggActive = Math.min(suggActive+1, items.length-1); updateActive(items); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { suggActive = Math.max(suggActive-1, -1); updateActive(items); e.preventDefault(); }
+    else if (e.key === 'Enter') {
+      if (suggActive >= 0 && items[suggActive]) { nameInput.value = items[suggActive].textContent; suggestEl.classList.remove('show'); doSearch(); }
+      else { suggestEl.classList.remove('show'); doSearch(); }
+    }
+    else if (e.key === 'Escape') suggestEl.classList.remove('show');
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.search-input-wrap')) suggestEl.classList.remove('show'); });
+
+  function updateActive(items) {
+    items.forEach((d,i) => d.classList.toggle('active', i === suggActive));
+    if (suggActive >= 0) items[suggActive].scrollIntoView({ block: 'nearest' });
+  }
+
+  // =====================
+  // カテゴリフィルター
+  // =====================
+  let activeCats = new Set();
+  function toggleCat(btn) {
+    const cat = btn.dataset.cat;
+    if (activeCats.has(cat)) { activeCats.delete(cat); btn.classList.remove('active'); }
+    else { activeCats.add(cat); btn.classList.add('active'); }
+    doSearch();
+  }
+
+  // =====================
+  // 検索ロジック
+  // =====================
+  function doSearch() {
+    const nameQ = nameInput.value.trim();
+    const packQ = document.getElementById('pack-select').value;
+
+    let cards = [];
+
+    if (nameQ) {
+      // ポケモン名で絞る（部分一致）
+      for (const [name, cardList] of Object.entries(ALL_DATA)) {
+        if (name.includes(nameQ)) {
+          cards.push(...cardList);
+        }
+      }
+    } else {
+      // 全カード
+      for (const cardList of Object.values(ALL_DATA)) {
+        cards.push(...cardList);
+      }
+    }
+
+    // カテゴリ絞り込み
+    if (activeCats.size > 0) {
+      cards = cards.filter(card =>
+        card.product_names.some(p => [...activeCats].some(cat => getCategory(p) === cat))
+      );
+    }
+
+    // パック絞り込み
+    if (packQ) {
+      cards = cards.filter(card => card.product_names.includes(packQ));
+    }
+
+    filteredCards = cards;
+    displayCount = PAGE_SIZE;
+    renderResults();
+  }
+
+  function renderResults() {
+    const container = document.getElementById('results');
+    const info = document.getElementById('result-info');
+    const wrap = document.getElementById('load-more-wrap');
+    container.innerHTML = '';
+
+    if (!filteredCards.length) {
+      container.innerHTML = '<div class="empty-state"><div class="emoji">😕</div><p>該当するカードが見つかりませんでした</p></div>';
+      info.innerHTML = '';
+      wrap.style.display = 'none';
+      return;
+    }
+
+    const showing = Math.min(displayCount, filteredCards.length);
+    info.innerHTML = `<strong>${filteredCards.length}</strong> 件見つかりました（${showing}件表示中）`;
+
+    filteredCards.slice(0, showing).forEach(card => {
+      const div = document.createElement('div');
+      div.className = 'card-item';
+      div.innerHTML = `
+        <img src="${card.image_url}" alt="${card.name}" loading="lazy" onerror="this.style.background='#1b2a3b'">
+        <div class="card-info">
+          <div class="card-name">${card.name}</div>
+          <div class="card-pack">${card.product_names.join(' / ')}</div>
+        </div>
+      `;
+      div.addEventListener('click', () => openModal(card));
+      container.appendChild(div);
+    });
+
+    wrap.style.display = showing < filteredCards.length ? 'block' : 'none';
+  }
+
+  function showMore() {
+    displayCount += PAGE_SIZE;
+    renderResults();
+    // info更新
+    const showing = Math.min(displayCount, filteredCards.length);
+    document.getElementById('result-info').innerHTML = `<strong>${filteredCards.length}</strong> 件見つかりました（${showing}件表示中）`;
+  }
+
+  function clearAll() {
+    nameInput.value = '';
+    document.getElementById('pack-select').value = '';
+    activeCats.clear();
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    suggestEl.classList.remove('show');
+    doSearch();
+  }
+
+  // =====================
+  // モーダル
+  // =====================
+  function openModal(card) {
+    document.getElementById('modal-img').src = card.image_url;
+    document.getElementById('modal-img').alt = card.name;
+    document.getElementById('modal-name').textContent = card.name;
+    document.getElementById('modal-packs').innerHTML = card.product_names.map(p => `• ${p}`).join('<br>');
+    document.getElementById('modal').classList.add('show');
+  }
+  function closeModal(e) {
+    if (e.target === document.getElementById('modal')) {
+      document.getElementById('modal').classList.remove('show');
+    }
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('modal').classList.remove('show');
+  });
+
+  // 起動
+  loadData();
+</script>
+
+</body>
+</html>
