@@ -504,6 +504,21 @@
       <button class="filter-btn series-btn" data-series="スカーレット&バイオレット" onclick="toggleSeries(this)">スカーレット&バイオレット</button>
     </div>
 
+    <!-- シリーズ絞り込み -->
+    <div class="filter-group">
+      <span class="filter-label">シリーズ：</span>
+      <button class="filter-btn series-btn" data-series="DP" onclick="toggleSeries(this)">DP</button>
+      <button class="filter-btn series-btn" data-series="DPt" onclick="toggleSeries(this)">DPt</button>
+      <button class="filter-btn series-btn" data-series="LEGEND" onclick="toggleSeries(this)">LEGEND</button>
+      <button class="filter-btn series-btn" data-series="BW" onclick="toggleSeries(this)">BW</button>
+      <button class="filter-btn series-btn" data-series="XY" onclick="toggleSeries(this)">XY</button>
+      <button class="filter-btn series-btn" data-series="XY BREAK" onclick="toggleSeries(this)">XY BREAK</button>
+      <button class="filter-btn series-btn" data-series="MEGA" onclick="toggleSeries(this)">MEGA</button>
+      <button class="filter-btn series-btn" data-series="サン&ムーン" onclick="toggleSeries(this)">サン&ムーン</button>
+      <button class="filter-btn series-btn" data-series="ソード&シールド" onclick="toggleSeries(this)">ソード&シールド</button>
+      <button class="filter-btn series-btn" data-series="スカーレット&バイオレット" onclick="toggleSeries(this)">スカーレット&バイオレット</button>
+    </div>
+
     <!-- パック名絞り込み -->
     <div class="pack-filter-row">
       <select class="pack-select" id="pack-select" onchange="doSearch()">
@@ -685,8 +700,13 @@
     updatePackSelect();
     doSearch();
   }
-  let activeSeries = new Set();
-
+  function toggleSeries(btn) {
+    const series = btn.dataset.series;
+    if (activeSeries.has(series)) { activeSeries.delete(series); btn.classList.remove('active'); }
+    else { activeSeries.add(series); btn.classList.add('active'); }
+    updatePackSelect();
+    doSearch();
+  }
   function toggleSeries(btn) {
     const series = btn.dataset.series;
     if (activeSeries.has(series)) { activeSeries.delete(series); btn.classList.remove('active'); }
@@ -787,6 +807,17 @@
     if (activeCats.size > 0) {
       cards = cards.filter(card =>
         card.product_names.some(p => [...activeCats].some(cat => getCategory(p) === cat))
+      );
+    }
+
+    // シリーズ絞り込み
+    if (activeSeries.size > 0) {
+      cards = cards.filter(card =>
+        card.product_names.some(p => {
+          const slash = p.indexOf('／');
+          const series = slash >= 0 ? p.substring(0, slash) : '';
+          return activeSeries.has(series);
+        })
       );
     }
 
