@@ -95,6 +95,16 @@
       font-size: 0.75rem;
       position: relative;
     }
+    .version-badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,214,10,0.5);
+      color: rgba(255,214,10,0.8);
+      font-size: 0.75rem;
+      position: relative;
+    }
 
     /* ローディング */
     #loading {
@@ -294,7 +304,7 @@
     .card-item img {
       width: 100%;
       aspect-ratio: 2/3;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
       background: #0a1628;
     }
@@ -601,7 +611,35 @@
     const cat = btn.dataset.cat;
     if (activeCats.has(cat)) { activeCats.delete(cat); btn.classList.remove('active'); }
     else { activeCats.add(cat); btn.classList.add('active'); }
+    updatePackSelect();
     doSearch();
+  }
+
+  function updatePackSelect() {
+    const sel = document.getElementById('pack-select');
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">── パック名で絞り込む ──</option>';
+    const packs = new Set();
+    for (const cards of Object.values(ALL_DATA)) {
+      for (const card of cards) {
+        for (const p of card.product_names) {
+          if (!isPack(p)) continue;
+          if (activeCats.size > 0) {
+            if ([...activeCats].some(cat => getCategory(p) === cat)) packs.add(p);
+          } else {
+            packs.add(p);
+          }
+        }
+      }
+    }
+    const sorted = [...packs].sort();
+    for (const p of sorted) {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    }
+    if (currentVal && [...packs].includes(currentVal)) sel.value = currentVal;
   }
 
   // =====================
@@ -687,10 +725,10 @@
 
   function clearAll() {
     nameInput.value = '';
-    document.getElementById('pack-select').value = '';
     activeCats.clear();
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     suggestEl.classList.remove('show');
+    updatePackSelect();
     doSearch();
   }
 
