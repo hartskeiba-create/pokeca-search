@@ -435,7 +435,7 @@
 <header>
   <h1 onclick="clearAll()" style="cursor:pointer">🔴 ポケカ検索くん</h1>
   <p>ポケモンカード検索サイト</p>
-  <div class="version-badge">ver1.04</div>
+  <div class="version-badge">ver1.06</div>
 </header>
 
 <div id="loading">
@@ -466,13 +466,42 @@
     <div class="filter-group">
       <span class="filter-label">入手方法：</span>
       <button class="filter-btn" data-cat="拡張パック" onclick="toggleCat(this)">拡張パック</button>
-      <button class="filter-btn" data-cat="強化拡張パック" onclick="toggleCat(this)">強化拡張パック</button>
       <button class="filter-btn" data-cat="ハイクラスパック" onclick="toggleCat(this)">ハイクラスパック</button>
       <button class="filter-btn" data-cat="コンセプトパック" onclick="toggleCat(this)">コンセプトパック</button>
       <button class="filter-btn" data-cat="デッキ" onclick="toggleCat(this)">デッキ</button>
       <button class="filter-btn" data-cat="プロモ" onclick="toggleCat(this)">プロモ</button>
       <button class="filter-btn" data-cat="スターター" onclick="toggleCat(this)">スターター</button>
       <button class="filter-btn" data-cat="スペシャル" onclick="toggleCat(this)">スペシャル</button>
+    </div>
+
+    <!-- シリーズ絞り込み -->
+    <div class="filter-group">
+      <span class="filter-label">シリーズ：</span>
+      <button class="filter-btn series-btn" data-series="DP" onclick="toggleSeries(this)">DP</button>
+      <button class="filter-btn series-btn" data-series="DPt" onclick="toggleSeries(this)">DPt</button>
+      <button class="filter-btn series-btn" data-series="LEGEND" onclick="toggleSeries(this)">LEGEND</button>
+      <button class="filter-btn series-btn" data-series="BW" onclick="toggleSeries(this)">BW</button>
+      <button class="filter-btn series-btn" data-series="XY" onclick="toggleSeries(this)">XY</button>
+      <button class="filter-btn series-btn" data-series="XY BREAK" onclick="toggleSeries(this)">XY BREAK</button>
+      <button class="filter-btn series-btn" data-series="MEGA" onclick="toggleSeries(this)">MEGA</button>
+      <button class="filter-btn series-btn" data-series="サン&ムーン" onclick="toggleSeries(this)">サン&ムーン</button>
+      <button class="filter-btn series-btn" data-series="ソード&シールド" onclick="toggleSeries(this)">ソード&シールド</button>
+      <button class="filter-btn series-btn" data-series="スカーレット&バイオレット" onclick="toggleSeries(this)">スカーレット&バイオレット</button>
+    </div>
+
+    <!-- シリーズ絞り込み -->
+    <div class="filter-group">
+      <span class="filter-label">シリーズ：</span>
+      <button class="filter-btn series-btn" data-series="DP" onclick="toggleSeries(this)">DP</button>
+      <button class="filter-btn series-btn" data-series="DPt" onclick="toggleSeries(this)">DPt</button>
+      <button class="filter-btn series-btn" data-series="LEGEND" onclick="toggleSeries(this)">LEGEND</button>
+      <button class="filter-btn series-btn" data-series="BW" onclick="toggleSeries(this)">BW</button>
+      <button class="filter-btn series-btn" data-series="XY" onclick="toggleSeries(this)">XY</button>
+      <button class="filter-btn series-btn" data-series="XY BREAK" onclick="toggleSeries(this)">XY BREAK</button>
+      <button class="filter-btn series-btn" data-series="MEGA" onclick="toggleSeries(this)">MEGA</button>
+      <button class="filter-btn series-btn" data-series="サン&ムーン" onclick="toggleSeries(this)">サン&ムーン</button>
+      <button class="filter-btn series-btn" data-series="ソード&シールド" onclick="toggleSeries(this)">ソード&シールド</button>
+      <button class="filter-btn series-btn" data-series="スカーレット&バイオレット" onclick="toggleSeries(this)">スカーレット&バイオレット</button>
     </div>
 
     <!-- パック名絞り込み -->
@@ -512,11 +541,10 @@
 
   // カテゴリ判定
   const CAT_KEYWORDS = {
-    '拡張パック':     ['拡張パック'],
-    '強化拡張パック': ['強化拡張パック'],
-    'ハイクラスパック':['ハイクラスパック'],
     'コンセプトパック':['コンセプトパック'],
-    'デッキ':        ['スタートデッキ', 'スターターデッキ', '対戦セット', '構築ハーフデッキ', '30枚デッキ', '60枚デッキ'],
+    'ハイクラスパック':['ハイクラスパック'],
+    '拡張パック':     ['拡張パック', '強化拡張パック'],
+    'デッキ':        ['スタートデッキ', 'スターターデッキ', '対戦セット', '構築ハーフデッキ', '30枚デッキ', '60枚デッキ', 'デッキ'],
     'プロモ':        ['プロモ', 'キャンペーン', '付録', '参加賞', 'プレゼント', 'コロコロ', '購入', 'おまけ', '特典', '限定'],
     'スターター':    ['スターターセット', 'スタートセット', 'はじめてセット'],
     'スペシャル':    ['スペシャル', 'コレクション', 'ギフト', 'ボックス', 'プレミアム'],
@@ -547,7 +575,7 @@
   }
 
   // パック選択リスト構築（拡張パック・強化拡張パック・ハイクラスパックのみ）
-  const PACK_TYPES = ['拡張パック', '強化拡張パック', 'ハイクラスパック', 'コンセプトパック'];
+  const PACK_TYPES = ['コンセプトパック', 'ハイクラスパック', '強化拡張パック', '拡張パック', 'デッキ', 'スタートデッキ', 'スターターデッキ'];
   function isPack(productName) {
     return PACK_TYPES.some(type => productName.includes(type));
   }
@@ -648,6 +676,24 @@
   // カテゴリフィルター
   // =====================
   let activeCats = new Set();
+  let activeSeries = new Set();
+
+  function toggleSeries(btn) {
+    const series = btn.dataset.series;
+    if (activeSeries.has(series)) { activeSeries.delete(series); btn.classList.remove('active'); }
+    else { activeSeries.add(series); btn.classList.add('active'); }
+    updatePackSelect();
+    doSearch();
+  }
+  let activeSeries = new Set();
+
+  function toggleSeries(btn) {
+    const series = btn.dataset.series;
+    if (activeSeries.has(series)) { activeSeries.delete(series); btn.classList.remove('active'); }
+    else { activeSeries.add(series); btn.classList.add('active'); }
+    updatePackSelect();
+    doSearch();
+  }
   function toggleCat(btn) {
     const cat = btn.dataset.cat;
     if (activeCats.has(cat)) { activeCats.delete(cat); btn.classList.remove('active'); }
@@ -658,29 +704,46 @@
 
   function updatePackSelect() {
     const sel = document.getElementById('pack-select');
-    const currentVal = sel.value;
     sel.innerHTML = '<option value="">── パック名で絞り込む ──</option>';
-    const packs = new Set();
+
+    const packCats = new Set(['拡張パック', 'コンセプトパック', 'ハイクラスパック', 'デッキ']);
+    const showPackDropdown = activeCats.size === 0 || [...activeCats].some(c => packCats.has(c));
+    if (!showPackDropdown) return;
+
+    function getSeries(p) {
+      const slash = p.indexOf('／');
+      return slash >= 0 ? p.substring(0, slash) : 'その他';
+    }
+
+    const seriesMap = {};
     for (const cards of Object.values(ALL_DATA)) {
       for (const card of cards) {
         for (const p of card.product_names) {
-          if (!isPack(p)) continue;
-          if (activeCats.size > 0) {
-            if ([...activeCats].some(cat => getCategory(p) === cat)) packs.add(p);
-          } else {
-            packs.add(p);
-          }
+          const cat = getCategory(p);
+          if (!packCats.has(cat)) continue;
+          if (activeCats.size > 0 && ![...activeCats].some(c => c === cat)) continue;
+          const series = getSeries(p);
+          if (activeSeries.size > 0 && !activeSeries.has(series)) continue;
+          if (!seriesMap[series]) seriesMap[series] = new Set();
+          seriesMap[series].add(p);
         }
       }
     }
-    const sorted = [...packs].sort();
-    for (const p of sorted) {
-      const opt = document.createElement('option');
-      opt.value = p;
-      opt.textContent = p;
-      sel.appendChild(opt);
+
+    const sortedSeries = Object.keys(seriesMap).sort();
+    for (const series of sortedSeries) {
+      const group = document.createElement('optgroup');
+      group.label = series;
+      const sortedPacks = [...seriesMap[series]].sort();
+      for (const p of sortedPacks) {
+        const opt = document.createElement('option');
+        opt.value = p;
+        const slash = p.indexOf('／');
+        opt.textContent = slash >= 0 ? p.substring(slash + 1) : p;
+        group.appendChild(opt);
+      }
+      sel.appendChild(group);
     }
-    if (currentVal && [...packs].includes(currentVal)) sel.value = currentVal;
   }
 
   // =====================
@@ -724,6 +787,28 @@
     if (activeCats.size > 0) {
       cards = cards.filter(card =>
         card.product_names.some(p => [...activeCats].some(cat => getCategory(p) === cat))
+      );
+    }
+
+    // シリーズ絞り込み
+    if (activeSeries.size > 0) {
+      cards = cards.filter(card =>
+        card.product_names.some(p => {
+          const slash = p.indexOf('／');
+          const series = slash >= 0 ? p.substring(0, slash) : '';
+          return activeSeries.has(series);
+        })
+      );
+    }
+
+    // シリーズ絞り込み
+    if (activeSeries.size > 0) {
+      cards = cards.filter(card =>
+        card.product_names.some(p => {
+          const slash = p.indexOf('／');
+          const series = slash >= 0 ? p.substring(0, slash) : '';
+          return activeSeries.has(series);
+        })
       );
     }
 
@@ -781,6 +866,7 @@
   function clearAll() {
     nameInput.value = '';
     activeCats.clear();
+    activeSeries.clear();
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     suggestEl.classList.remove('show');
     updatePackSelect();
