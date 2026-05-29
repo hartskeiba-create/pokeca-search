@@ -582,6 +582,7 @@
     const seriesMap = {};
     for (const cards of Object.values(ALL_DATA)) {
       for (const card of cards) {
+        if (card.source !== 'existing' || !card.product_names) continue;
         for (const p of card.product_names) {
           const cat = getCategory(p);
           if (!packCats.has(cat)) continue;
@@ -633,8 +634,10 @@
     const allPacks = new Set();
     for (const cards of Object.values(ALL_DATA)) {
       for (const card of cards) {
-        for (const p of card.product_names) {
-          if (isPack(p)) allPacks.add(p);
+        if (card.source === 'existing' && card.product_names) {
+          for (const p of card.product_names) {
+            if (isPack(p)) allPacks.add(p);
+          }
         }
       }
     }
@@ -704,7 +707,7 @@
       }
       for (const cardList of Object.values(ALL_DATA)) {
         for (const card of cardList) {
-          if (card.product_names.some(p => p.includes(nameQ)) && !seen.has(card.image_url)) {
+          if (card.source === 'existing' && card.product_names && card.product_names.some(p => p.includes(nameQ)) && !seen.has(card.image_url)) {
             seen.add(card.image_url);
             cards.push(card);
           }
