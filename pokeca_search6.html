@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ポケカ検索くん</title>
+  <title>ポケカ検索ベストくん</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
 
@@ -386,9 +386,9 @@
 <body>
 
 <header>
-  <h1 onclick="clearAll()">🔴 ポケカ検索くん</h1>
+  <h1 onclick="clearAll()">🔴 ポケカ検索ベストくん</h1>
   <p>ポケモンカード検索サイト</p>
-  <div class="version-badge">ver1.12</div>
+  <div class="version-badge">ver1.13</div>
 </header>
 
 <div id="loading">
@@ -428,11 +428,11 @@
     <div class="filter-group">
       <span class="filter-label">シリーズ：</span>
       <button class="filter-btn series-btn" data-series="スカーレット&amp;バイオレット" onclick="toggleSeries(this)">スカーレット&amp;バイオレット</button>
+      <button class="filter-btn series-btn" data-series="MEGA" onclick="toggleSeries(this)">MEGA</button>
       <button class="filter-btn series-btn" data-series="ソード&amp;シールド" onclick="toggleSeries(this)">ソード&amp;シールド</button>
       <button class="filter-btn series-btn" data-series="サン&amp;ムーン" onclick="toggleSeries(this)">サン&amp;ムーン</button>
       <button class="filter-btn series-btn" data-series="XY BREAK" onclick="toggleSeries(this)">XY BREAK</button>
       <button class="filter-btn series-btn" data-series="XY" onclick="toggleSeries(this)">XY</button>
-      <button class="filter-btn series-btn" data-series="MEGA" onclick="toggleSeries(this)">MEGA</button>
       <button class="filter-btn series-btn" data-series="BW" onclick="toggleSeries(this)">BW</button>
       <button class="filter-btn series-btn" data-series="LEGEND" onclick="toggleSeries(this)">LEGEND</button>
       <button class="filter-btn series-btn" data-series="DPt" onclick="toggleSeries(this)">DPt</button>
@@ -616,7 +616,9 @@
     const allPacks = new Set();
     for (const cards of Object.values(ALL_DATA)) {
       for (const card of cards) {
-        for (const p of card.product_names) allPacks.add(p);
+        for (const p of card.product_names) {
+          if (isPack(p)) allPacks.add(p);
+        }
       }
     }
     const packHits = [...allPacks].filter(p => p.includes(q)).slice(0, 5);
