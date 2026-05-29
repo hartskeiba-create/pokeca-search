@@ -292,9 +292,12 @@
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      overflow: hidden;
+      overflow: visible;
       cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+    .card-item img {
+      border-radius: 6% / 4%;
     }
     .card-item img {
       border-radius: 6% / 4%;
@@ -432,7 +435,7 @@
 <header>
   <h1 onclick="clearAll()" style="cursor:pointer">🔴 ポケカ検索くん</h1>
   <p>ポケモンカード検索サイト</p>
-  <div class="version-badge">ver1.02</div>
+  <div class="version-badge">ver1.04</div>
 </header>
 
 <div id="loading">
@@ -579,16 +582,49 @@
     const q = nameInput.value.trim();
     suggestEl.innerHTML = '';
     suggActive = -1;
-    if (!q) { suggestEl.classList.remove('show'); return; }
-    const hits = ALL_NAMES.filter(n => n.includes(q)).slice(0, 10);
-    if (!hits.length) { suggestEl.classList.remove('show'); return; }
-    hits.forEach((n, i) => {
-      const d = document.createElement('div');
-      d.textContent = n;
-      d.addEventListener('click', () => { nameInput.value = n; suggestEl.classList.remove('show'); doSearch(); });
-      suggestEl.appendChild(d);
-    });
+    if (!q) { suggestEl.classList.remove('show'); doSearch(); return; }
+
+    // ポケモン名候補
+    const nameHits = ALL_NAMES.filter(n => n.includes(q)).slice(0, 8);
+    // パック名候補
+    const allPacks = new Set();
+    for (const cards of Object.values(ALL_DATA)) {
+      for (const card of cards) {
+        for (const p of card.product_names) allPacks.add(p);
+      }
+    }
+    const packHits = [...allPacks].filter(p => p.includes(q)).slice(0, 5);
+
+    if (!nameHits.length && !packHits.length) { suggestEl.classList.remove('show'); doSearch(); return; }
+
+    if (nameHits.length) {
+      const label = document.createElement('div');
+      label.textContent = 'ポケモン名';
+      label.style.cssText = 'font-size:0.7rem;color:var(--text-dim);padding:6px 16px 2px;pointer-events:none';
+      suggestEl.appendChild(label);
+      nameHits.forEach(n => {
+        const d = document.createElement('div');
+        d.textContent = n;
+        d.dataset.type = 'name';
+        d.addEventListener('click', () => { nameInput.value = n; suggestEl.classList.remove('show'); doSearch(); });
+        suggestEl.appendChild(d);
+      });
+    }
+    if (packHits.length) {
+      const label = document.createElement('div');
+      label.textContent = 'パック名';
+      label.style.cssText = 'font-size:0.7rem;color:var(--text-dim);padding:6px 16px 2px;pointer-events:none';
+      suggestEl.appendChild(label);
+      packHits.forEach(p => {
+        const d = document.createElement('div');
+        d.textContent = p;
+        d.dataset.type = 'pack';
+        d.addEventListener('click', () => { nameInput.value = p; suggestEl.classList.remove('show'); doSearch(); });
+        suggestEl.appendChild(d);
+      });
+    }
     suggestEl.classList.add('show');
+    doSearch();
   });
 
   nameInput.addEventListener('keydown', e => {
@@ -658,10 +694,24 @@
 
     if (nameQ) {
       // ポケモン名で絞る（部分一致）
+      const nameMatches = [];
+      const packMatches = [];
       for (const [name, cardList] of Object.entries(ALL_DATA)) {
-        if (name.includes(nameQ)) {
-          cards.push(...cardList);
+        if (name.includes(nameQ)) nameMatches.push(...cardList);
+      }
+      // パック名でも絞る（部分一致）
+      for (const cardList of Object.values(ALL_DATA)) {
+        for (const card of cardList) {
+          if (card.product_names.some(p => p.includes(nameQ))) {
+            packMatches.push(card);
+          }
         }
+      }
+      // 重複除去してマージ
+      const seen = new Set();
+      for (const card of [...nameMatches, ...packMatches]) {
+        const key = card.image_url;
+        if (!seen.has(key)) { seen.add(key); cards.push(card); }
       }
     } else {
       // 全カード
