@@ -296,6 +296,9 @@
       cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
     }
+    .card-item img {
+      border-radius: 6% / 4%;
+    }
     .card-item:hover {
       transform: translateY(-4px) scale(1.02);
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
@@ -427,9 +430,9 @@
 <body>
 
 <header>
-  <h1>🔴 ポケカ検索くん</h1>
+  <h1 onclick="clearAll()" style="cursor:pointer">🔴 ポケカ検索くん</h1>
   <p>ポケモンカード検索サイト</p>
-  <div class="version-badge">ver1.01</div>
+  <div class="version-badge">ver1.02</div>
 </header>
 
 <div id="loading">
@@ -462,6 +465,7 @@
       <button class="filter-btn" data-cat="拡張パック" onclick="toggleCat(this)">拡張パック</button>
       <button class="filter-btn" data-cat="強化拡張パック" onclick="toggleCat(this)">強化拡張パック</button>
       <button class="filter-btn" data-cat="ハイクラスパック" onclick="toggleCat(this)">ハイクラスパック</button>
+      <button class="filter-btn" data-cat="コンセプトパック" onclick="toggleCat(this)">コンセプトパック</button>
       <button class="filter-btn" data-cat="デッキ" onclick="toggleCat(this)">デッキ</button>
       <button class="filter-btn" data-cat="プロモ" onclick="toggleCat(this)">プロモ</button>
       <button class="filter-btn" data-cat="スターター" onclick="toggleCat(this)">スターター</button>
@@ -508,7 +512,8 @@
     '拡張パック':     ['拡張パック'],
     '強化拡張パック': ['強化拡張パック'],
     'ハイクラスパック':['ハイクラスパック'],
-    'デッキ':        ['デッキ', 'スタートデッキ', 'スターターデッキ', '対戦セット', '構築'],
+    'コンセプトパック':['コンセプトパック'],
+    'デッキ':        ['スタートデッキ', 'スターターデッキ', '対戦セット', '構築ハーフデッキ', '30枚デッキ', '60枚デッキ'],
     'プロモ':        ['プロモ', 'キャンペーン', '付録', '参加賞', 'プレゼント', 'コロコロ', '購入', 'おまけ', '特典', '限定'],
     'スターター':    ['スターターセット', 'スタートセット', 'はじめてセット'],
     'スペシャル':    ['スペシャル', 'コレクション', 'ギフト', 'ボックス', 'プレミアム'],
@@ -539,7 +544,7 @@
   }
 
   // パック選択リスト構築（拡張パック・強化拡張パック・ハイクラスパックのみ）
-  const PACK_TYPES = ['拡張パック', '強化拡張パック', 'ハイクラスパック'];
+  const PACK_TYPES = ['拡張パック', '強化拡張パック', 'ハイクラスパック', 'コンセプトパック'];
   function isPack(productName) {
     return PACK_TYPES.some(type => productName.includes(type));
   }
