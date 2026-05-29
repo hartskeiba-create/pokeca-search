@@ -388,7 +388,7 @@
 <header>
   <h1 onclick="clearAll()">🔴 ポケカ検索ベストくん</h1>
   <p>ポケモンカード検索サイト</p>
-  <div class="version-badge">ver1.13</div>
+  <div class="version-badge">ver1.14</div>
 </header>
 
 <div id="loading">
@@ -469,6 +469,19 @@
   let displayCount = 100;
   const PAGE_SIZE = 100;
 
+  function getPackDisplay(card) {
+    if (card.source === 'existing' && card.product_names && card.product_names.length > 0) {
+      return card.product_names.join(' / ');
+    }
+    if (card.source === 'pokecardex') {
+      const parts = [];
+      if (card.pack_code) parts.push(card.pack_code);
+      if (card.card_num) parts.push(card.card_num);
+      return parts.join(' ') || '拡張パック';
+    }
+    return '';
+  }
+
   const CAT_KEYWORDS = {
     'コンセプトパック':['コンセプトパック'],
     'ハイクラスパック':['ハイクラスパック'],
@@ -500,16 +513,20 @@
 
   async function loadData() {
     try {
-      const res = await fetch('all_pokemon_cards.json');
+      const res = await fetch('all_pokemon_cards_new.json');
       if (!res.ok) throw new Error('fetch failed');
-      ALL_DATA = await res.json();
+      const rawData = await res.json();
+      ALL_DATA = {};
+      for (const [name, cards] of Object.entries(rawData)) {
+        ALL_DATA[name] = cards.map(card => ({ ...card, name }));
+      }
       ALL_NAMES = Object.keys(ALL_DATA).sort();
       document.getElementById('loading').style.display = 'none';
       document.getElementById('main').style.display = 'block';
       updatePackSelect();
       doSearch();
     } catch(e) {
-      document.getElementById('loading').innerHTML = '<p style="color:#e63946">⚠️ データの読み込みに失敗しました。<br>same フォルダに all_pokemon_cards.json があるか確認してください。</p>';
+      document.getElementById('loading').innerHTML = '<p style="color:#e63946">⚠️ データの読み込みに失敗しました。<br>same フォルダに all_pokemon_cards_new.json があるか確認してください。</p>';
     }
   }
 
@@ -700,19 +717,27 @@
     }
 
     if (activeCats.size > 0) {
-      cards = cards.filter(card =>
-        card.product_names.some(p => [...activeCats].some(cat => getCategory(p) === cat))
-      );
+      cards = cards.filter(card => {
+        if (card.source === 'existing' && card.product_names) {
+          return card.product_names.some(p => [...activeCats].some(cat => getCategory(p) === cat));
+        }
+        return false;
+      });
     }
 
     if (activeSeries.size > 0) {
-      cards = cards.filter(card =>
-        card.product_names.some(p => activeSeries.has(getSeries(p)))
-      );
+      cards = cards.filter(card => {
+        if (card.source === 'existing' && card.product_names) {
+          return card.product_names.some(p => activeSeries.has(getSeries(p)));
+        }
+        return false;
+      });
     }
 
     if (packQ) {
-      cards = cards.filter(card => card.product_names.includes(packQ));
+      cards = cards.filter(card =>
+        card.source === 'existing' && card.product_names && card.product_names.includes(packQ)
+      );
     }
 
     filteredCards = cards;
@@ -743,7 +768,7 @@
         <img src="${card.image_url}" alt="${card.name}" loading="lazy" onerror="this.style.background='#1b2a3b'">
         <div class="card-info">
           <div class="card-name">${card.name}</div>
-          <div class="card-pack">${card.product_names.join(' / ')}</div>
+          <div class="card-pack">${getPackDisplay(card)}</div>
         </div>
       `;
       div.addEventListener('click', () => openModal(card));
@@ -772,7 +797,16 @@
     document.getElementById('modal-img').src = card.image_url;
     document.getElementById('modal-img').alt = card.name;
     document.getElementById('modal-name').textContent = card.name;
-    document.getElementById('modal-packs').innerHTML = card.product_names.map(p => `• ${p}`).join('<br>');
+    let packsHtml = '';
+    if (card.source === 'existing' && card.product_names) {
+      packsHtml = card.product_names.map(p => `• ${p}`).join('<br>');
+    } else if (card.source === 'pokecardex') {
+      const parts = [];
+      if (card.pack_code) parts.push(`パックコード: ${card.pack_code}`);
+      if (card.card_num) parts.push(`カード番号: ${card.card_num}`);
+      packsHtml = parts.join('<br>');
+    }
+    document.getElementById('modal-packs').innerHTML = packsHtml;
     document.getElementById('modal').classList.add('show');
   }
   function closeModal(e) {
