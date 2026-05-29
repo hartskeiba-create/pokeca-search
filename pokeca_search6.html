@@ -388,7 +388,7 @@
 <header>
   <h1 onclick="clearAll()">🔴 ポケカ検索くん</h1>
   <p>ポケモンカード検索サイト</p>
-  <div class="version-badge">ver1.11</div>
+  <div class="version-badge">ver1.12</div>
 </header>
 
 <div id="loading">
@@ -427,16 +427,16 @@
 
     <div class="filter-group">
       <span class="filter-label">シリーズ：</span>
-      <button class="filter-btn series-btn" data-series="DP" onclick="toggleSeries(this)">DP</button>
-      <button class="filter-btn series-btn" data-series="DPt" onclick="toggleSeries(this)">DPt</button>
-      <button class="filter-btn series-btn" data-series="LEGEND" onclick="toggleSeries(this)">LEGEND</button>
-      <button class="filter-btn series-btn" data-series="BW" onclick="toggleSeries(this)">BW</button>
-      <button class="filter-btn series-btn" data-series="XY" onclick="toggleSeries(this)">XY</button>
-      <button class="filter-btn series-btn" data-series="XY BREAK" onclick="toggleSeries(this)">XY BREAK</button>
-      <button class="filter-btn series-btn" data-series="MEGA" onclick="toggleSeries(this)">MEGA</button>
-      <button class="filter-btn series-btn" data-series="サン&amp;ムーン" onclick="toggleSeries(this)">サン&amp;ムーン</button>
-      <button class="filter-btn series-btn" data-series="ソード&amp;シールド" onclick="toggleSeries(this)">ソード&amp;シールド</button>
       <button class="filter-btn series-btn" data-series="スカーレット&amp;バイオレット" onclick="toggleSeries(this)">スカーレット&amp;バイオレット</button>
+      <button class="filter-btn series-btn" data-series="ソード&amp;シールド" onclick="toggleSeries(this)">ソード&amp;シールド</button>
+      <button class="filter-btn series-btn" data-series="サン&amp;ムーン" onclick="toggleSeries(this)">サン&amp;ムーン</button>
+      <button class="filter-btn series-btn" data-series="XY BREAK" onclick="toggleSeries(this)">XY BREAK</button>
+      <button class="filter-btn series-btn" data-series="XY" onclick="toggleSeries(this)">XY</button>
+      <button class="filter-btn series-btn" data-series="MEGA" onclick="toggleSeries(this)">MEGA</button>
+      <button class="filter-btn series-btn" data-series="BW" onclick="toggleSeries(this)">BW</button>
+      <button class="filter-btn series-btn" data-series="LEGEND" onclick="toggleSeries(this)">LEGEND</button>
+      <button class="filter-btn series-btn" data-series="DPt" onclick="toggleSeries(this)">DPt</button>
+      <button class="filter-btn series-btn" data-series="DP" onclick="toggleSeries(this)">DP</button>
     </div>
 
     <div class="pack-filter-row">
@@ -533,6 +533,28 @@
   }
 
   function updatePackSelect() {
+    const SERIES_ORDER = [
+      'スカーレット&バイオレット', 'ソード&シールド', 'サン&ムーン',
+      'XY BREAK', 'XY', 'MEGA', 'BW', 'LEGEND', 'DPt', 'DP',
+    ];
+    const PACK_ORDER = {
+      'スカーレット&バイオレット': [
+        'ホワイトフレア', 'ブラックボルト', 'ロケット団の栄光', 'バトルパートナーズ',
+        'ステラミラクル', '超電ブレイカー', '熱風のアリーナ', '楽園ドラゴーナ',
+        'ナイトワンダラー', 'テラスタルフェスex', 'クリムゾンヘイズ', '変幻の仮面',
+        'レイジングサーフ', 'ワイルドフォース', 'シャイニートレジャーex', '未来の一閃',
+        '古代の咆哮', '151', 'サイバージャッジ', '黒炎の支配者', 'スノーハザード',
+        'クレイバースト', 'バイオレットex', 'スカーレットex',
+      ],
+    };
+
+    function getPackOrder(series, packName) {
+      const order = PACK_ORDER[series];
+      if (!order) return 9999;
+      const idx = order.findIndex(k => packName.includes(k));
+      return idx >= 0 ? idx : 9999;
+    }
+
     const sel = document.getElementById('pack-select');
     sel.innerHTML = '<option value="">── パック名で絞り込む ──</option>';
 
@@ -555,11 +577,20 @@
       }
     }
 
-    const sortedSeries = Object.keys(seriesMap).sort();
+    const sortedSeries = Object.keys(seriesMap).sort((a, b) => {
+      const ai = SERIES_ORDER.indexOf(a);
+      const bi = SERIES_ORDER.indexOf(b);
+      return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+    });
+
     for (const series of sortedSeries) {
       const group = document.createElement('optgroup');
       group.label = series;
-      const sortedPacks = [...seriesMap[series]].sort();
+      const sortedPacks = [...seriesMap[series]].sort((a, b) => {
+        const aName = a.substring(a.indexOf('／') + 1);
+        const bName = b.substring(b.indexOf('／') + 1);
+        return getPackOrder(series, aName) - getPackOrder(series, bName);
+      });
       for (const p of sortedPacks) {
         const opt = document.createElement('option');
         opt.value = p;
