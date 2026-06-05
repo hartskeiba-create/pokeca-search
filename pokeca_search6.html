@@ -104,12 +104,14 @@
     .card-info { padding: 8px 10px; }
     .card-name { font-size: 0.8rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .card-pack { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
-    #load-more-wrap { text-align: center; margin-top: 24px; }
-    #load-more {
-      padding: 12px 40px; border-radius: 12px; border: 2px solid var(--yellow);
-      background: transparent; color: var(--yellow); font-size: 1rem; font-family: inherit; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    #pagination { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .page-btn {
+      min-width: 36px; height: 36px; padding: 0 10px; border-radius: 8px;
+      border: 2px solid var(--border); background: transparent; color: var(--text-dim);
+      font-size: 0.9rem; font-family: inherit; cursor: pointer; transition: all 0.2s;
     }
-    #load-more:hover { background: var(--yellow); color: var(--bg); }
+    .page-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+    .page-btn.active { background: var(--yellow); border-color: var(--yellow); color: var(--bg); font-weight: 700; }
     #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
     #modal.show { display: flex; }
     .modal-inner {
@@ -139,7 +141,7 @@
 <header>
   <h1 onclick="clearAll()">🔴 ポケカ検索ベストくん</h1>
   <p>ポケモンカード検索サイト</p>
-  <div class="version-badge">ver1.16</div>
+  <div class="version-badge">ver1.18</div>
 </header>
 <div id="loading">
   <svg class="pokeball-spin" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -198,9 +200,7 @@
   </div>
   <div class="result-info" id="result-info"></div>
   <div id="results"></div>
-  <div id="load-more-wrap" style="display:none">
-    <button id="load-more" onclick="showMore()">もっと見る</button>
-  </div>
+  <div id="pagination"></div>
 </div>
 <div id="modal" onclick="closeModal(event)">
   <div class="modal-inner">
@@ -214,8 +214,8 @@
   let ALL_DATA = {};
   let ALL_NAMES = [];
   let filteredCards = [];
-  let displayCount = 50;
-  const PAGE_SIZE = 50;
+  let currentPage = 1;
+  const PAGE_SIZE = 30;
   let exactMatch = false;
 
   const CAT_KEYWORDS = {
@@ -495,6 +495,10 @@
         if (card.source === 'existing' && card.product_names) {
           return card.product_names.some(p => [...activeCats].some(cat => getCategory(p) === cat));
         }
+        if (card.source === 'pokecardex') {
+          const isPromo = card.card_num && /P/.test(card.card_num);
+          return activeCats.has('プロモ') && isPromo;
+        }
         return false;
       });
     }
@@ -515,28 +519,30 @@
     }
 
     filteredCards = cards;
-    displayCount = PAGE_SIZE;
+    currentPage = 1;
     renderResults();
   }
 
   function renderResults() {
     const container = document.getElementById('results');
     const info = document.getElementById('result-info');
-    const wrap = document.getElementById('load-more-wrap');
+    const pagination = document.getElementById('pagination');
     container.innerHTML = '';
+    pagination.innerHTML = '';
 
     if (!filteredCards.length) {
       container.innerHTML = '<div class="empty-state"><div class="emoji">😕</div><p>該当するカードが見つかりませんでした</p></div>';
       info.innerHTML = '';
-      wrap.style.display = 'none';
       return;
     }
 
-    const showing = Math.min(displayCount, filteredCards.length);
-    info.innerHTML = `<strong>${filteredCards.length}</strong> 件見つかりました（${showing}件表示中）`;
+    const totalPages = Math.ceil(filteredCards.length / PAGE_SIZE);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    info.innerHTML = `<strong>${filteredCards.length}</strong> 件見つかりました（${start + 1}〜${Math.min(end, filteredCards.length)}件表示中）`;
 
     const fragment = document.createDocumentFragment();
-    filteredCards.slice(0, showing).forEach(card => {
+    filteredCards.slice(start, end).forEach(card => {
       const packDisplay = getPackDisplay(card);
       const div = document.createElement('div');
       div.className = 'card-item';
@@ -551,12 +557,20 @@
       fragment.appendChild(div);
     });
     container.appendChild(fragment);
-    wrap.style.display = showing < filteredCards.length ? 'block' : 'none';
-  }
 
-  function showMore() {
-    displayCount += PAGE_SIZE;
-    renderResults();
+    if (totalPages > 1) {
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.addEventListener('click', () => {
+          currentPage = i;
+          renderResults();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        pagination.appendChild(btn);
+      }
+    }
   }
 
   function clearAll() {
