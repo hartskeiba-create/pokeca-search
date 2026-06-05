@@ -188,6 +188,7 @@
     }
     .filter-btn:hover { border-color: var(--light-blue); color: var(--light-blue); }
     .filter-btn.active { background: var(--red); border-color: var(--red); color: white; font-weight: 700; }
+    .match-btn.active { background: #023e8a; border-color: #48cae4; color: white; font-weight: 700; }
 
     .pack-filter-row {
       display: flex;
@@ -388,7 +389,7 @@
 <header>
   <h1 onclick="clearAll()">🔴 ポケカ検索ベストくん</h1>
   <p>ポケモンカード検索サイト</p>
-  <div class="version-badge">ver1.14</div>
+  <div class="version-badge">ver1.15</div>
 </header>
 
 <div id="loading">
@@ -410,6 +411,7 @@
         <input type="text" id="name-input" placeholder="ポケモン名・パック名を入力" autocomplete="off">
         <div id="suggestions"></div>
       </div>
+      <button class="filter-btn match-btn" id="match-btn" onclick="toggleMatch()" title="部分一致／完全一致切り替え">部分一致</button>
       <button class="btn-search" onclick="doSearch()">検索</button>
       <button class="btn-clear" onclick="clearAll()">クリア</button>
     </div>
@@ -466,21 +468,9 @@
   let ALL_DATA = {};
   let ALL_NAMES = [];
   let filteredCards = [];
-  let displayCount = 100;
-  const PAGE_SIZE = 100;
-
-  function getPackDisplay(card) {
-    if (card.source === 'existing' && card.product_names && card.product_names.length > 0) {
-      return card.product_names.join(' / ');
-    }
-    if (card.source === 'pokecardex') {
-      const parts = [];
-      if (card.pack_code) parts.push(card.pack_code);
-      if (card.card_num) parts.push(card.card_num);
-      return parts.join(' ') || '拡張パック';
-    }
-    return '';
-  }
+  let displayCount = 50;
+  const PAGE_SIZE = 50;
+  let exactMatch = false;
 
   const CAT_KEYWORDS = {
     'コンセプトパック':['コンセプトパック'],
@@ -511,6 +501,27 @@
     return slash >= 0 ? p.substring(0, slash) : 'その他';
   }
 
+  function getPackDisplay(card) {
+    if (card.source === 'existing' && card.product_names && card.product_names.length > 0) {
+      return card.product_names.join(' / ');
+    }
+    if (card.source === 'pokecardex') {
+      const parts = [];
+      if (card.pack_code) parts.push(card.pack_code);
+      if (card.card_num) parts.push(card.card_num);
+      return parts.join(' ') || '拡張パック';
+    }
+    return '';
+  }
+
+  function toggleMatch() {
+    exactMatch = !exactMatch;
+    const btn = document.getElementById('match-btn');
+    btn.textContent = exactMatch ? '完全一致' : '部分一致';
+    btn.classList.toggle('active', exactMatch);
+    doSearch();
+  }
+
   async function loadData() {
     try {
       const res = await fetch('all_pokemon_cards_new.json');
@@ -526,7 +537,7 @@
       updatePackSelect();
       doSearch();
     } catch(e) {
-      document.getElementById('loading').innerHTML = '<p style="color:#e63946">⚠️ データの読み込みに失敗しました。<br>same フォルダに all_pokemon_cards_new.json があるか確認してください。</p>';
+      document.getElementById('loading').innerHTML = '<p style="color:#e63946">⚠️ データの読み込みに失敗しました。<br>同じフォルダに all_pokemon_cards_new.json があるか確認してください。</p>';
     }
   }
 
@@ -630,7 +641,10 @@
     suggActive = -1;
     if (!q) { suggestEl.classList.remove('show'); doSearch(); return; }
 
-    const nameHits = ALL_NAMES.filter(n => n.includes(q)).slice(0, 8);
+    const nameHits = exactMatch
+      ? ALL_NAMES.filter(n => n === q).slice(0, 8)
+      : ALL_NAMES.filter(n => n.includes(q)).slice(0, 8);
+
     const allPacks = new Set();
     for (const cards of Object.values(ALL_DATA)) {
       for (const card of cards) {
@@ -699,17 +713,21 @@
     if (nameQ) {
       const seen = new Set();
       for (const [name, cardList] of Object.entries(ALL_DATA)) {
-        if (name.includes(nameQ)) {
+        const hit = exactMatch ? name === nameQ : name.includes(nameQ);
+        if (hit) {
           for (const card of cardList) {
             if (!seen.has(card.image_url)) { seen.add(card.image_url); cards.push(card); }
           }
         }
       }
-      for (const cardList of Object.values(ALL_DATA)) {
-        for (const card of cardList) {
-          if (card.source === 'existing' && card.product_names && card.product_names.some(p => p.includes(nameQ)) && !seen.has(card.image_url)) {
-            seen.add(card.image_url);
-            cards.push(card);
+      if (!exactMatch) {
+        for (const cardList of Object.values(ALL_DATA)) {
+          for (const card of cardList) {
+            if (card.source === 'existing' && card.product_names &&
+                card.product_names.some(p => p.includes(nameQ)) && !seen.has(card.image_url)) {
+              seen.add(card.image_url);
+              cards.push(card);
+            }
           }
         }
       }
@@ -764,19 +782,22 @@
     const showing = Math.min(displayCount, filteredCards.length);
     info.innerHTML = `<strong>${filteredCards.length}</strong> 件見つかりました（${showing}件表示中）`;
 
+    const fragment = document.createDocumentFragment();
     filteredCards.slice(0, showing).forEach(card => {
+      const packDisplay = getPackDisplay(card);
       const div = document.createElement('div');
       div.className = 'card-item';
       div.innerHTML = `
         <img src="${card.image_url}" alt="${card.name}" loading="lazy" onerror="this.style.background='#1b2a3b'">
         <div class="card-info">
           <div class="card-name">${card.name}</div>
-          <div class="card-pack">${getPackDisplay(card)}</div>
+          <div class="card-pack">${packDisplay}</div>
         </div>
       `;
       div.addEventListener('click', () => openModal(card));
-      container.appendChild(div);
+      fragment.appendChild(div);
     });
+    container.appendChild(fragment);
 
     wrap.style.display = showing < filteredCards.length ? 'block' : 'none';
   }
@@ -790,6 +811,10 @@
     nameInput.value = '';
     activeCats.clear();
     activeSeries.clear();
+    exactMatch = false;
+    const btn = document.getElementById('match-btn');
+    btn.textContent = '部分一致';
+    btn.classList.remove('active');
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     suggestEl.classList.remove('show');
     updatePackSelect();
@@ -812,6 +837,7 @@
     document.getElementById('modal-packs').innerHTML = packsHtml;
     document.getElementById('modal').classList.add('show');
   }
+
   function closeModal(e) {
     if (e.target === document.getElementById('modal')) {
       document.getElementById('modal').classList.remove('show');
